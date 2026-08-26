@@ -1,3 +1,6 @@
+# Yandex CLI
+yandex-cli/*
+
 # Local .terraform directories
 .terraform/
 
