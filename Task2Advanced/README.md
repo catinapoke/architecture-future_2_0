@@ -15,6 +15,8 @@ Apply берёт именно тот plan-файл, который только 
 
 Workflow лежит в `.github/workflows/`, а не внутри `Task2Advanced` для работы GitHub Actions.
 
+![](./github-actions.png)
+
 # Секреты
 
 | Secret | Что туда положить |
