@@ -4,7 +4,7 @@
 # Публичный SSH-ключ для metadata ВМ. В CI задаётся секретом TF_VAR_SSH_KEY.
 export TF_VAR_ssh_key ?= ubuntu:$(shell cat $(HOME)/.ssh/cloudru.pub)
 
-TFVARS := ./envs/dev/terraform.tfvars.example
+TFVARS := ./envs/dev/terraform.tfvars
 
 init:
 	terraform init -backend-config="access_key=$(ACCESS_KEY)" -backend-config="secret_key=$(SECRET_KEY)"

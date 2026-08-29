@@ -2,7 +2,7 @@
 
 В рамках задания 2 был создан бакет на Yandex Cloud для бекенда Terraform.
 
-Конфиг прописан в `main.tf`: бакет `ya-p-bucket`, ключ объекта `state/terraform.tfstate`. 
+Конфиг прописан в `main.tf`: бакет `ya-p-bucket`, ключ объекта `state/terraform.tfstate`.
 Ключи доступа бакета хранятся в переменных окружения `ACCESS_KEY` / `SECRET_KEY`.
 
 Ключ провайдера Yandex Cloud тоже в переменных окружения: `YC_CLOUD_ID`, `YC_FOLDER_ID` и ключ сервисного аккаунта.
@@ -12,6 +12,7 @@
 Apply берёт именно тот plan-файл, который только что собрала джоба `plan` (артефакт живёт 1 день). Применяется ровно то, что было в plan.
 
 `concurrency.group: terraform-task2` не даёт двум apply идти параллельно и портить state.
+Также `use_lockfile = true` включает нативную блокировку state (объект `state/terraform.tfstate.tflock` в том же бакете), чтобы параллельные apply не портили состояние.
 
 Workflow лежит в `.github/workflows/`, а не внутри `Task2Advanced` для работы GitHub Actions.
 
