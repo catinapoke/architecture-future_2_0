@@ -87,7 +87,9 @@ jobs:
     name: terraform apply
     needs: plan
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && inputs.command == 'apply'
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/future') ||
+      (github.event_name == 'workflow_dispatch' && inputs.command == 'apply')
     environment: terraform-apply
     defaults:
       run:
