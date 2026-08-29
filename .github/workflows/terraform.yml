@@ -1,0 +1,153 @@
+name: Task2 Terraform
+
+on:
+  pull_request:
+    paths:
+      - "Task2Advanced/**"
+      - ".github/workflows/terraform.yml"
+  push:
+    branches: [future]
+    paths:
+      - "Task2Advanced/**"
+      - ".github/workflows/terraform.yml"
+  workflow_dispatch:
+    inputs:
+      command:
+        description: Что запустить
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+        default: plan
+
+concurrency:
+  group: terraform-task2
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  ACCESS_KEY: ${{ secrets.ACCESS_KEY }}
+  SECRET_KEY: ${{ secrets.SECRET_KEY }}
+  YC_CLOUD_ID: ${{ secrets.YC_CLOUD_ID }}
+  YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
+  TF_VAR_ssh_key: ${{ secrets.TF_VAR_SSH_KEY }}
+
+jobs:
+  plan:
+    name: terraform plan
+    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || inputs.command == 'plan' || inputs.command == 'apply'
+    defaults:
+      run:
+        working-directory: Task2Advanced
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare Yandex service account key
+        env:
+          YC_SA_KEY: ${{ secrets.YC_SA_KEY }}
+        run: |
+          printf '%s' "$YC_SA_KEY" > "$RUNNER_TEMP/sa-key.json"
+          echo "YC_SERVICE_ACCOUNT_KEY_FILE=$RUNNER_TEMP/sa-key.json" >> "$GITHUB_ENV"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+          terraform_wrapper: false
+
+      - name: Terraform fmt
+        run: terraform fmt -check -diff main.tf variables.tf modules
+
+      - name: Terraform init
+        run: terraform init -input=false -backend-config="access_key=${ACCESS_KEY}" -backend-config="secret_key=${SECRET_KEY}"
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan
+        run: terraform plan -input=false -var-file=envs/dev/terraform.tfvars.example -out=tfplan -no-color
+
+      - name: Upload plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: Task2Advanced/tfplan
+          retention-days: 1
+          if-no-files-found: error
+
+  apply:
+    name: terraform apply
+    needs: plan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && inputs.command == 'apply'
+    environment: terraform-apply
+    defaults:
+      run:
+        working-directory: Task2Advanced
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare Yandex service account key
+        env:
+          YC_SA_KEY: ${{ secrets.YC_SA_KEY }}
+        run: |
+          printf '%s' "$YC_SA_KEY" > "$RUNNER_TEMP/sa-key.json"
+          echo "YC_SERVICE_ACCOUNT_KEY_FILE=$RUNNER_TEMP/sa-key.json" >> "$GITHUB_ENV"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+          terraform_wrapper: false
+
+      - name: Terraform init
+        run: terraform init -input=false -backend-config="access_key=${ACCESS_KEY}" -backend-config="secret_key=${SECRET_KEY}"
+
+      - name: Download plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+          path: Task2Advanced
+
+      - name: Terraform apply
+        run: terraform apply -input=false -auto-approve tfplan
+
+  destroy:
+    name: terraform destroy
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && inputs.command == 'destroy'
+    environment: terraform-apply
+    defaults:
+      run:
+        working-directory: Task2Advanced
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare Yandex service account key
+        env:
+          YC_SA_KEY: ${{ secrets.YC_SA_KEY }}
+        run: |
+          printf '%s' "$YC_SA_KEY" > "$RUNNER_TEMP/sa-key.json"
+          echo "YC_SERVICE_ACCOUNT_KEY_FILE=$RUNNER_TEMP/sa-key.json" >> "$GITHUB_ENV"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+          terraform_wrapper: false
+
+      - name: Terraform init
+        run: terraform init -input=false -backend-config="access_key=${ACCESS_KEY}" -backend-config="secret_key=${SECRET_KEY}"
+
+      - name: Terraform destroy
+        run: terraform destroy -input=false -auto-approve -var-file=envs/dev/terraform.tfvars.example
