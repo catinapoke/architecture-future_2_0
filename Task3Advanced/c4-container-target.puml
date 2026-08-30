@@ -1,0 +1,78 @@
+@startuml C4 Container — target «Будущее 2.0»
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_TOP_DOWN()
+title C4 Container — целевой ландшафт на 3 года
+
+Person(staff, "Сотрудник клиники", "Лечение, расписание, оборудование")
+Person(analyst, "Бизнес-пользователь", "Самообслуживание: готовые и свои отчёты в рамках доступа")
+Person(banker, "Сотрудник банка", "Финтех-продукты")
+Person_Ext(partner, "Партнёр", "Фарма и производитель медтехники")
+
+System_Ext(pharmaCo, "Фармацевтические компании", "Каталоги, поставки, регуляторные данные")
+System_Ext(deviceCo, "Производитель медтехники", "Телеметрия, сервис, поставки оборудования")
+
+System_Boundary(future, "Будущее 2.0 — облако, изолированные среды доменов") {
+
+    System_Boundary(med, "Домен медобслуживания") {
+        Container(clinicUi, "Клиническое приложение", "Web", "Замена PowerBuilder. Операционный UI клиник")
+        Container(clinicCore, "Сервис медобслуживания", "backend", "Карты, исследования, поток пациентов. Источник операционных событий")
+        ContainerDb(clinicDb, "Клиническое хранилище", "операционная БД + object storage", "Карты, истории болезни, снимки. Не отдаётся в витрину аналитики")
+    }
+
+    System_Boundary(aiDom, "Домен ИИ-диагностики") {
+        Container(aiSvc, "ИИ-сервисы", "Python", "Инференс, монетизация ИИ-функций. Публикует события результата, не сырые карты")
+    }
+
+    System_Boundary(finDom, "Домен финтеха") {
+        Container(finSvc, "Финтех-сервисы", "Golang, Java", "Счета, кредиты, новые финтех-продукты. Несколько регионов")
+        ContainerDb(finDb, "Банковское хранилище", "операционная БД", "Финансовая история в контуре банка")
+    }
+
+    System_Boundary(opsDom, "Домен внутренних операций") {
+        Container(opsSvc, "Сервисы операций", "backend", "Кадры, инвентарь, управление клиниками")
+    }
+
+    System_Boundary(pharmaDom, "Домен фармакологии") {
+        Container(pharmaSvc, "Фарма-сервисы", "backend", "Новое направление: номенклатура, поставки, интеграции с фармой")
+    }
+
+    System_Boundary(techDom, "Домен медтехники") {
+        Container(techSvc, "Сервисы медтехники", "backend", "Новое направление: парк оборудования, телеметрия, сервис")
+    }
+
+    System_Boundary(platform, "Событийная платформа") {
+        Container(bus, "Брокер событий", "Kafka + Schema Registry", "Слабосвязанный обмен доменов. Near-real-time потоки, каталог схем, DLQ как топики Kafka")
+        Container(stream, "Потоковая обработка", "Flink", "Сборка дата-продуктов в ClickHouse. Без бизнес-логики клиники и банка в DWH")
+    }
+
+    System_Boundary(selfserve, "Домен самообслуживания") {
+        Container(portal, "Портал самообслуживания", "DataHub", "Каталог дата-продуктов, lineage, поиск, глоссарий, политика доступа. Сотрудник находит срез и собирает отчёт в рамках прав")
+        ContainerDb(marts, "Потоковые витрины", "ClickHouse", "OLAP-витрины доменов: Kafka Engine + MergeTree. Без карт, историй болезни и результатов исследований")
+    }
+}
+
+Rel(staff, clinicUi, "Работает с пациентами и слотами")
+Rel(clinicUi, clinicCore, "Команды / запросы", "HTTPS")
+Rel(clinicCore, clinicDb, "Читает и пишет клинические данные")
+Rel(banker, finSvc, "Работает с продуктами банка")
+Rel(finSvc, finDb, "Читает и пишет финансовые данные")
+Rel(analyst, portal, "Строит и смотрит отчёты в рамках доступа")
+Rel(partner, pharmaSvc, "Обмен номенклатурой и поставками")
+Rel(partner, techSvc, "Обмен телеметрией и сервисом")
+Rel(pharmaSvc, pharmaCo, "API партнёра")
+Rel(techSvc, deviceCo, "API / телеметрия")
+
+Rel(clinicCore, bus, "Публикует", "пациент, визит, слот — без выгрузки карт в аналитику")
+Rel(aiSvc, bus, "Публикует / читает", "события ИИ-исследований для клинического контура")
+Rel(finSvc, bus, "Публикует / читает", "платёж, договор, счёт")
+Rel(opsSvc, bus, "Публикует / читает", "кадры, инвентарь, клиника")
+Rel(pharmaSvc, bus, "Публикует / читает", "поставка, номенклатура")
+Rel(techSvc, bus, "Публикует / читает", "телеметрия, наработка оборудования")
+
+Rel(bus, stream, "Потоки событий")
+Rel(stream, marts, "Пишет витрины", "near-real-time → ClickHouse")
+Rel(portal, marts, "Читает срезы и снимает метаданные")
+
+SHOW_LEGEND()
+@enduml
