@@ -48,3 +48,8 @@ terraform.rc
 # planout
 
 .DS_Store
+
+**/node_modules/
+Task5Advanced/tech_radar/dist
+Task5Advanced/tech_radar/build
+Task5Advanced/tech_radar/.techradar
