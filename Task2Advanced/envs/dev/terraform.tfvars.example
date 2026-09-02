@@ -1,0 +1,7 @@
+cores  = 2
+memory = 2
+zone   = "ru-central1-a"
+
+# Публичный ключ лучше не коммитить. Локально: скопируйте файл
+# в terraform.tfvars и раскомментируйте строку, либо задайте TF_VAR_ssh_key.
+# ssh_key = "ubuntu:ssh-ed25519 AAAA..."

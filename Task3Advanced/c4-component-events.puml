@@ -1,0 +1,35 @@
+@startuml C4 Component — событийная платформа
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_LEFT_RIGHT()
+title C4 Component — событийная платформа (near-real-time)
+
+Container_Ext(clinicCore, "Сервис медобслуживания", "backend", "Источник событий потока пациентов")
+Container_Ext(aiSvc, "ИИ-сервисы", "Python", "Источник событий ИИ-исследований")
+Container_Ext(finSvc, "Финтех-сервисы", "Golang, Java", "Источник финансовых событий")
+Container_Ext(opsSvc, "Сервисы операций", "backend", "Кадры, инвентарь, клиники")
+Container_Ext(pharmaSvc, "Фарма-сервисы", "backend", "Новый домен")
+Container_Ext(techSvc, "Сервисы медтехники", "backend", "Новый домен")
+ContainerDb_Ext(marts, "Потоковые витрины", "ClickHouse", "Дата-продукты доменов, без клинических карт и исследований")
+
+Container_Boundary(platform, "Событийная платформа") {
+    Component(ingress, "SDK продюсеров", "клиентская библиотека", "Публикация событий, идемпотентность, трассировка")
+    Component(registry, "Каталог схем", "Schema Registry", "Контракт события, совместимость, владельцы")
+    Component(broker, "Брокер", "Kafka", "Топики доменов, ACL, DLQ-топики, репликация по регионам. Клинические топики аналитике закрыты")
+    Component(processor, "Потоковые джобы", "Flink", "Агрегации near-real-time → ClickHouse")
+}
+
+Rel(clinicCore, ingress, "PatientRegistered, VisitCompleted")
+Rel(aiSvc, ingress, "AiStudyCompleted")
+Rel(finSvc, ingress, "ContractCreated, PaymentPosted")
+Rel(opsSvc, ingress, "StaffUpdated, InventoryChanged")
+Rel(pharmaSvc, ingress, "SupplyReceived")
+Rel(techSvc, ingress, "DeviceTelemetryReceived")
+
+Rel(ingress, registry, "Проверяет схему перед публикацией")
+Rel(ingress, broker, "Пишет в топик домена")
+Rel(broker, processor, "Читает разрешённые топики")
+Rel(processor, marts, "Пишет витрины")
+
+SHOW_LEGEND()
+@enduml

@@ -1,0 +1,71 @@
+@startuml event-storming
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+LAYOUT_TOP_DOWN()
+title Context Map — «Будущее 2.0»
+
+Enterprise_Boundary(future, "Будущее 2.0") {
+
+    System_Boundary(med, "Медобслуживание") {
+        System(visit, "Запись и визит", "Запись на слот, явка, приём, счёт за визит")
+        System(diag, "Постановка диагноза", "Заключение ставит врач")
+        System(hist, "История болезни", "Клинические записи и назначения")
+    }
+
+    System_Boundary(aiDom, "ИИ определения диагноза") {
+        System(ai, "Рекомендация ИИ диагноза", "Совет модели, не диагноз")
+    }
+
+    System_Boundary(finDom, "Финтех") {
+        System(acc, "Счёт", "Открытие, пополнение, списание")
+        System(pay, "Платёж", "Платёж с назначением")
+        System(cred, "Кредитный договор", "Заявка, одобрение, ставка")
+    }
+
+    System_Boundary(pharmaDom, "Фармакология") {
+        System(pharma, "Номенклатура и поставки", "Каталог sku и приход партии")
+    }
+
+    System_Boundary(techDom, "Работа с мед техникой") {
+        System(tech, "Показания устройства", "Аппарат и метрики на приёме")
+    }
+
+    System_Boundary(opsDom, "Внутренние операции") {
+        System(staff, "Сотрудник", "Кадры клиники")
+        System(tmc, "Учет ТМЦ", "Тип позиции и остаток")
+        System(accnt, "Внутренний учёт", "Проводка дебет-кредит")
+    }
+
+    System_Boundary(authDom, "Авторизация") {
+        System(auth, "Учётные записи и права", "Логин и роли")
+    }
+
+    System_Boundary(anDom, "Аналитика") {
+        System(analytics, "Витрины и портал", "Самообслуживание без истории и диагноза")
+    }
+}
+
+System_Ext(acl, "Camel + DWH", "Anti-Corruption Layer, только миграция")
+
+Rel(visit, diag, "Завершён визит")
+Rel(diag, hist, "Поставлен диагноз")
+Rel(hist, pharma, "Выписано назначение")
+Rel(visit, ai, "Запрошена рекомендация ИИ")
+Rel(ai, diag, "Выдана рекомендация ИИ")
+Rel(tech, visit, "Получены показания устройства")
+Rel(staff, visit, "Добавлен сотрудник")
+Rel(staff, auth, "Добавлен сотрудник")
+Rel(visit, pay, "Выставлен счёт за визит")
+Rel(pay, acc, "Проведён платёж")
+Rel(acc, cred, "Открыт счёт")
+Rel(pharma, tmc, "Получена поставка")
+Rel(pay, accnt, "Проведён платёж")
+Rel(visit, analytics, "Создана запись, завершён визит")
+Rel(pay, analytics, "Проведён платёж")
+Rel(staff, analytics, "Добавлен сотрудник")
+
+Rel(visit, acl, "старые форматы")
+Rel(acc, acl, "старые форматы")
+
+SHOW_LEGEND()
+@enduml
